@@ -84,6 +84,10 @@ public class KeychainService<Account: IAccount> {
         UserDefaults.standard.set(account.identifier, forKey: "currentAccount")
     }
     
+    public func logout(){
+        UserDefaults.standard.removeObject(forKey: "currentAccount")
+    }
+    
     public func getCurrentAccount(_ accounts: [Account]) -> AnyPublisher<Account, Error> {
         let currentAccount = UserDefaults.standard.string(forKey: "currentAccount")
         
