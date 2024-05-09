@@ -39,7 +39,7 @@ public class KeychainService<Account: IAccount> {
         }
     }
     
-    public func getAccounts() -> AnyPublisher<[Account], Error> {
+    public func getAccounts() throws -> [Account] {
         var accounts: [Account] = []
 
         let query: [String: Any] = [
@@ -60,24 +60,26 @@ public class KeychainService<Account: IAccount> {
                 
                 if let account = try? JSONDecoder().decode(Account.self, from: accountData) {
                     accounts.append(account)
+                }else {
+                    throw LoginError.encodeFailed
                 }
             }
+        }else {
+            throw LoginError.encodeFailed
         }
         
-        return Just(accounts)
-            .setFailureType(to: Error.self)
-            .eraseToAnyPublisher()
+        return accounts
     }
 
-    public func removeAccounts() -> AnyPublisher<[Account], Error> {
+    public func removeAccounts() throws -> [Account] {
         let delete: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword
         ]
-        _ = SecItemDelete(delete as CFDictionary)
-        
-        return Just([])
-            .setFailureType(to: Error.self)
-            .eraseToAnyPublisher()
+        let status = SecItemDelete(delete as CFDictionary)
+        if(status != errSecSuccess){
+            throw LoginError.keychainStatus(status)
+        }
+        return []
     }
     
     public func login(_ account: Account){
@@ -88,29 +90,22 @@ public class KeychainService<Account: IAccount> {
         UserDefaults.standard.removeObject(forKey: "currentAccount")
     }
     
-    public func getCurrentAccount(_ accounts: [Account]) -> AnyPublisher<Account, Error> {
+    public func getCurrentAccount(_ accounts: [Account]) throws -> Account? {
         let currentAccount = UserDefaults.standard.string(forKey: "currentAccount")
         
         if(currentAccount == nil){
-            return Empty().eraseToAnyPublisher()
+            return nil
         }
         
         if let current = accounts.first(where: {
             $0.identifier == currentAccount
         }) {
-            return just(current)
+            return current
         }else{
-            return Fail(error: LoginError.keychainReadFailed).eraseToAnyPublisher()
+            throw LoginError.keychainReadFailed
         }
         
     }
-    
-    func just<T>(_ event: T) -> AnyPublisher<T, Error> {
-        return Just(event)
-            .setFailureType(to: Error.self)
-            .eraseToAnyPublisher()
-    }
-
 }
 
 
