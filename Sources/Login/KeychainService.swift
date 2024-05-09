@@ -8,15 +8,15 @@ public protocol IAccount: Codable {
 
 // MARK: - keychain service
 @available(iOS 16.0, *)
-class KeychainService<Account: IAccount> {
+public class KeychainService<Account: IAccount> {
     // MARK: - private functions
     private let service: String
     
-    init(_ service: String = "de.selch"){
+    public init(_ service: String = "de.selch"){
         self.service = service
     }
     
-    func saveAccount(_ account: Account) -> AnyPublisher<Bool, Error> {
+    public func saveAccount(_ account: Account) -> AnyPublisher<Bool, Error> {
         
         guard
             let idData = account.identifier.data(using: .utf8),
