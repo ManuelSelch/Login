@@ -2,10 +2,6 @@ import Security
 import Foundation
 import Combine
 
-public protocol IAccount: Codable {
-    var identifier: String {get set}
-}
-
 // MARK: - keychain service
 @available(iOS 16.0, *)
 public class KeychainService<Account: IAccount> {
