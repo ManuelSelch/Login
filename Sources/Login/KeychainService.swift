@@ -8,7 +8,7 @@ public class KeychainService<Account: IAccount> {
     // MARK: - private functions
     private let service: String
     
-    public init(_ service: String = "de.selch"){
+    public init(_ service: String){
         self.service = service
     }
     
