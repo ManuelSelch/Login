@@ -12,13 +12,12 @@ public class KeychainService<Account: IAccount> {
         self.service = service
     }
     
-    public func saveAccount(_ account: Account) -> AnyPublisher<Bool, Error> {
-        
+    public func saveAccount(_ account: Account) throws {
         guard
             let idData = account.identifier.data(using: .utf8),
             let accountData = try? JSONEncoder().encode(account)
         else {
-            return Fail(error: LoginError.keychainReadFailed).eraseToAnyPublisher()
+            throw LoginError.keychainReadFailed
         }
 
         // Create a keychain query dictionary
@@ -36,9 +35,7 @@ public class KeychainService<Account: IAccount> {
         // Add the new credentials to the Keychain
         let status = SecItemAdd(query as CFDictionary, nil)
         if status != errSecSuccess {
-            return Fail(error: LoginError.keychainSaveFailed).eraseToAnyPublisher()
-        }else{
-            return just(true)
+            throw LoginError.keychainSaveFailed
         }
     }
     
