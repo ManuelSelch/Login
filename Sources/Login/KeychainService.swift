@@ -71,7 +71,27 @@ public class KeychainService<Account: IAccount> {
         return accounts
     }
 
-    public func removeAccounts() throws -> [Account] {
+    public func removeAccount(_ account: Account) throws {
+        guard
+            let idData = account.identifier.data(using: .utf8)
+        else {
+            throw LoginError.keychainReadFailed
+        }
+        
+        let delete: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            
+            kSecAttrAccount as String: idData
+        ]
+
+        let status = SecItemDelete(delete as CFDictionary)
+        if(status != errSecSuccess){
+            throw LoginError.keychainStatus(status)
+        }
+    }
+    
+    public func removeAccounts() throws {
         let delete: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword
         ]
@@ -79,7 +99,6 @@ public class KeychainService<Account: IAccount> {
         if(status != errSecSuccess){
             throw LoginError.keychainStatus(status)
         }
-        return []
     }
     
     public func login(_ account: Account){
