@@ -64,8 +64,6 @@ public class KeychainService<Account: IAccount> {
                     throw LoginError.encodeFailed
                 }
             }
-        }else {
-            throw LoginError.encodeFailed
         }
         
         return accounts
