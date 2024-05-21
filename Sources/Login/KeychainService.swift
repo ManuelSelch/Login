@@ -3,128 +3,155 @@ import Foundation
 import Combine
 
 // MARK: - keychain service
-@available(iOS 16.0, *)
-public class KeychainService<Account: IAccount> {
-    // MARK: - private functions
-    private let service: String
+public struct KeychainService<Account: IAccount> {
+    public var saveAccount: (Account) throws -> ()
     
-    public init(_ service: String){
-        self.service = service
-    }
+    public var getAccounts: () throws -> [Account]
+
+    public var removeAccount: (Account) throws -> ()
     
-    public func saveAccount(_ account: Account) throws {
-        guard
-            let idData = account.identifier.data(using: .utf8),
-            let accountData = try? JSONEncoder().encode(account)
-        else {
-            throw LoginError.keychainReadFailed
-        }
-
-        // Create a keychain query dictionary
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            
-            kSecAttrAccount as String: idData,
-            kSecValueData as String: accountData,
-        ]
-
-        // Delete any existing credentials for the same account before saving
-        SecItemDelete(query as CFDictionary)
-
-        // Add the new credentials to the Keychain
-        let status = SecItemAdd(query as CFDictionary, nil)
-        if status != errSecSuccess {
-            throw LoginError.keychainSaveFailed
-        }
-    }
+    public var removeAccounts: () throws -> ()
     
-    public func getAccounts() throws -> [Account] {
-        var accounts: [Account] = []
+    public var login: (Account) -> ()
+    
+    public var logout: () -> ()
+    
+    public var getCurrentAccount: ([Account]) throws -> Account?
+}
 
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
 
-            kSecReturnAttributes as String: true, //kCFBooleanTrue
-            kSecReturnData as String: true, //kCFBooleanTrue
-            kSecMatchLimit as String: kSecMatchLimitAll
-        ]
+public extension KeychainService {
+    static func live(_ service: String) -> Self {
+        func saveAccount(_ account: Account) throws {
+            guard
+                let idData = account.identifier.data(using: .utf8),
+                let accountData = try? JSONEncoder().encode(account)
+            else {
+                throw LoginError.keychainReadFailed
+            }
 
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        if status == errSecSuccess, let items = result as? [[String: Any]] {
-            for item in items {
-                guard  let accountData = item[kSecValueData as String]     as? Data else { continue}
+            // Create a keychain query dictionary
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
                 
-                if let account = try? JSONDecoder().decode(Account.self, from: accountData) {
-                    accounts.append(account)
-                }else {
-                    throw LoginError.encodeFailed
-                }
+                kSecAttrAccount as String: idData,
+                kSecValueData as String: accountData,
+            ]
+
+            // Delete any existing credentials for the same account before saving
+            SecItemDelete(query as CFDictionary)
+
+            // Add the new credentials to the Keychain
+            let status = SecItemAdd(query as CFDictionary, nil)
+            if status != errSecSuccess {
+                throw LoginError.keychainSaveFailed
             }
         }
         
-        return accounts
-    }
+        func getAccounts() throws -> [Account] {
+            var accounts: [Account] = []
 
-    public func removeAccount(_ account: Account) throws {
-        guard
-            let idData = account.identifier.data(using: .utf8)
-        else {
-            throw LoginError.keychainReadFailed
-        }
-        
-        let delete: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+
+                kSecReturnAttributes as String: true, //kCFBooleanTrue
+                kSecReturnData as String: true, //kCFBooleanTrue
+                kSecMatchLimit as String: kSecMatchLimitAll
+            ]
+
+            var result: AnyObject?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+            if status == errSecSuccess, let items = result as? [[String: Any]] {
+                for item in items {
+                    guard  let accountData = item[kSecValueData as String]     as? Data else { continue}
+                    
+                    if let account = try? JSONDecoder().decode(Account.self, from: accountData) {
+                        accounts.append(account)
+                    }else {
+                        throw LoginError.encodeFailed
+                    }
+                }
+            }
             
-            kSecAttrAccount as String: idData
-        ]
+            return accounts
+        }
 
-        let status = SecItemDelete(delete as CFDictionary)
-        if(status != errSecSuccess){
-            throw LoginError.keychainStatus(status)
-        }
-    }
-    
-    public func removeAccounts() throws {
-        let delete: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword
-        ]
-        let status = SecItemDelete(delete as CFDictionary)
-        if(status != errSecSuccess){
-            throw LoginError.keychainStatus(status)
-        }
-    }
-    
-    public func login(_ account: Account){
-        UserDefaults.standard.set(account.identifier, forKey: "currentAccount")
-    }
-    
-    public func logout(){
-        UserDefaults.standard.removeObject(forKey: "currentAccount")
-    }
-    
-    public func getCurrentAccount(_ accounts: [Account]) throws -> Account? {
-        let currentAccount = UserDefaults.standard.string(forKey: "currentAccount")
-        
-        if(currentAccount == nil){
-            return nil
+        func removeAccount(_ account: Account) throws {
+            guard
+                let idData = account.identifier.data(using: .utf8)
+            else {
+                throw LoginError.keychainReadFailed
+            }
+            
+            let delete: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                
+                kSecAttrAccount as String: idData
+            ]
+
+            let status = SecItemDelete(delete as CFDictionary)
+            if(status != errSecSuccess){
+                throw LoginError.keychainStatus(status)
+            }
         }
         
-        if let current = accounts.first(where: {
-            $0.identifier == currentAccount
-        }) {
-            return current
-        }else{
-            throw LoginError.keychainReadFailed
+        func removeAccounts() throws {
+            let delete: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword
+            ]
+            let status = SecItemDelete(delete as CFDictionary)
+            if(status != errSecSuccess){
+                throw LoginError.keychainStatus(status)
+            }
         }
         
+        func login(_ account: Account){
+            UserDefaults.standard.set(account.identifier, forKey: "currentAccount")
+        }
+        
+        func logout(){
+            UserDefaults.standard.removeObject(forKey: "currentAccount")
+        }
+        
+        func getCurrentAccount(_ accounts: [Account]) throws -> Account? {
+            let currentAccount = UserDefaults.standard.string(forKey: "currentAccount")
+            
+            if(currentAccount == nil){
+                return nil
+            }
+            
+            if let current = accounts.first(where: {
+                $0.identifier == currentAccount
+            }) {
+                return current
+            }else{
+                throw LoginError.keychainReadFailed
+            }
+            
+        }
+        
+        return Self(saveAccount: saveAccount, getAccounts: getAccounts, removeAccount: removeAccount, removeAccounts: removeAccounts, login: login, logout: logout, getCurrentAccount: getCurrentAccount)
+    }
+    
+    static var mock: Self {
+        var current: Account?
+        var accounts: [Account] = []
+        
+        return Self(
+            saveAccount: { a in accounts.append(a) },
+            getAccounts: { accounts },
+            removeAccount: { a in accounts.removeAll(where: { $0.identifier == a.identifier}) },
+            removeAccounts: { accounts.removeAll() },
+            login: { current = $0 },
+            logout: { current = nil },
+            getCurrentAccount: { _ in current }
+        )
     }
 }
-
 
 
 
