@@ -1,9 +1,11 @@
 import Security
 import Foundation
 import Combine
+import Dependencies
+
 
 // MARK: - keychain service
-public struct KeychainService<Account: IAccount> {
+public struct KeychainService<Account: IAccount>: DependencyKey {
     public var saveAccount: (Account) throws -> ()
     
     public var getAccounts: () throws -> [Account]
@@ -134,7 +136,15 @@ public extension KeychainService {
             
         }
         
-        return Self(saveAccount: saveAccount, getAccounts: getAccounts, removeAccount: removeAccount, removeAccounts: removeAccounts, login: login, logout: logout, getCurrentAccount: getCurrentAccount)
+        return Self(
+            saveAccount: saveAccount,
+            getAccounts: getAccounts,
+            removeAccount: removeAccount,
+            removeAccounts: removeAccounts,
+            login: login,
+            logout: logout,
+            getCurrentAccount: getCurrentAccount
+        )
     }
     
     static var mock: Self {
@@ -153,7 +163,9 @@ public extension KeychainService {
     }
 }
 
-
-
-
+extension KeychainService {
+    static public var liveValue: Self {
+        Self.live("de.selch")
+    }
+}
 
