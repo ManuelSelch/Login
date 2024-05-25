@@ -163,9 +163,13 @@ public extension KeychainService {
     }
 }
 
-extension KeychainService {
-    static public var liveValue: Self {
+public extension KeychainService {
+    static var liveValue: Self {
         Self.live("de.selch")
+    }
+    
+    struct TestAccount: IAccount {
+        public var identifier: String = "id"
     }
 }
 
