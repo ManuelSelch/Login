@@ -1,11 +1,11 @@
 import Security
 import Foundation
 import Combine
-import Dependencies
+import Redux
 
 
 // MARK: - keychain service
-public struct KeychainService<Account: IAccount>: DependencyKey {
+public struct KeychainService<Account: IAccount> {
     public var saveAccount: (Account) throws -> ()
     
     public var getAccounts: () throws -> [Account]
@@ -152,7 +152,13 @@ public extension KeychainService {
         var accounts: [Account] = []
         
         return Self(
-            saveAccount: { a in accounts.append(a) },
+            saveAccount: { a in
+                if let index = accounts.firstIndex(where: {$0.identifier == a.identifier}) {
+                    accounts[index] = a
+                } else {
+                    accounts.append(a)
+                }
+            },
             getAccounts: { accounts },
             removeAccount: { a in accounts.removeAll(where: { $0.identifier == a.identifier}) },
             removeAccounts: { accounts.removeAll() },
@@ -162,14 +168,3 @@ public extension KeychainService {
         )
     }
 }
-
-public extension KeychainService {
-    static var liveValue: Self {
-        Self.live("de.selch")
-    }
-    
-    struct TestAccount: IAccount {
-        public var identifier: String = "id"
-    }
-}
-
