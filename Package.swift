@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "Login",
+    name: "LoginService",
     platforms: [
         .iOS(.v16), .macOS(.v12)
     ],
@@ -12,17 +12,17 @@ let package = Package(
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "Login",
-            targets: ["Login"]),
+            targets: ["LoginService"]),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "Login",
+            name: "LoginService",
             path: "Sources"
         ),
         .testTarget(
-            name: "LoginTests",
-            dependencies: ["Login"]),
+            name: "LoginServiceTests",
+            dependencies: ["LoginService"]),
     ]
 )
